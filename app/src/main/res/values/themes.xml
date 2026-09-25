@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.PiRob" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:colorPrimary">#22385F</item>
+        <item name="android:colorPrimaryDark">#1A2B49</item>
+        <item name="android:colorAccent">#4E9A52</item>
+        <item name="android:windowBackground">@android:color/white</item>
+        <item name="android:statusBarColor">#1A2B49</item>
+    </style>
+</resources>
