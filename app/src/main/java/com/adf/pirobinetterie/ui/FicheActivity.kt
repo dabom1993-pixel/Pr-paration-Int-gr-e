@@ -127,7 +127,7 @@ class FicheActivity : Activity() {
         gauche.addView(carteRevisions(), lp(MATCH, WRAP).marges(0, 0, 0, dp(12)))
         gauche.addView(carteChamps("Donnée technique", ChampsFiche.donneesTechniques, diff), lp(MATCH, WRAP).marges(0, 0, 0, dp(12)))
         gauche.addView(carteChamps("Besoins", ChampsFiche.besoins, diff), lp(MATCH, WRAP).marges(0, 0, 0, dp(12)))
-        gauche.addView(carteChamps("Travaux", ChampsFiche.travaux, diff), lp(MATCH, WRAP))
+        gauche.addView(carteChamps("Traçage / Ressort / SOMF / EPI", ChampsFiche.divers, diff), lp(MATCH, WRAP))
         haut.addView(gauche, lp(0, WRAP, 1f).marges(0, 0, dp(12), 0))
         haut.addView(carteImages(diff), lp(0, WRAP, 1.3f))
         contenu.addView(haut, lp(MATCH, WRAP).marges(0, 0, 0, dp(12)))
@@ -198,7 +198,7 @@ class FicheActivity : Activity() {
     }
 
     private fun carteImages(diff: Diff): View {
-        val c = carte("Photo  (3/4)  et localisation sur plot plan  (1/4)")
+        val c = carte("Photo  et  localisation sur plot plan")
         c.addView(cadreImage(item.photo, "Aucune photo", dp(420), diff.photo) { item.photo.takeIf { it.isNotEmpty() }?.let { afficherImage(it, "${item.nom} — photo") } })
         val bPhoto = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         bPhoto.addView(bouton("📷  Prendre la photo", Couleurs.MARINE) { prendrePhoto() }, lp(0, WRAP, 1f).marges(0, dp(8), dp(6), dp(12)))
@@ -280,7 +280,7 @@ class FicheActivity : Activity() {
             c.addView(texte("Supprimée(s) depuis la Rév. ${item.derniere?.num} : $noms", 15f, true, Couleurs.ROUGE).apply { setPadding(0, dp(8), 0, 0) })
         }
         c.addView(bouton("+  Ajouter une bride", Couleurs.VERT) { ajouterBride() }, lp(WRAP, WRAP).marges(0, dp(10), 0, 0))
-        c.addView(texte("Boulonnerie calculée d'après l'ABBAQUE (DN + PN, longueur RF + ${com.adf.pirobinetterie.model.Abaque.nombre(depot.rondelleMm)} mm si rondelle) ; valeurs modifiables à la main.", 13f, false, Couleurs.GRIS)
+        c.addView(texte("Boulonnerie calculée d'après l'ABBAQUE (DN + PN, longueur RF ou RTJ selon la face, + ${com.adf.pirobinetterie.model.Abaque.nombre(depot.rondelleMm)} mm si rondelle) ; valeurs modifiables à la main.", 13f, false, Couleurs.GRIS)
             .apply { setPadding(0, dp(6), 0, 0) })
         return c
     }
@@ -304,7 +304,7 @@ class FicheActivity : Activity() {
         saisir("${b[ChampsBride.REP].ifEmpty { "Bride" }} — ${col.libelle}", b[col.cle], options) { v ->
             if (b[col.cle] == v) return@saisir
             b[col.cle] = v
-            if (col.cle == ChampsBride.DN || col.cle == ChampsBride.PN || col.cle == ChampsBride.RONDELLE) recalculer(b, silencieux = true)
+            if (col.cle == ChampsBride.DN || col.cle == ChampsBride.PN || col.cle == ChampsBride.RONDELLE || col.cle == ChampsBride.FACE) recalculer(b, silencieux = true)
             depot.sauver()
             afficher()
         }

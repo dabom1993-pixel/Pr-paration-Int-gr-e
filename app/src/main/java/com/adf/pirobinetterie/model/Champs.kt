@@ -2,9 +2,10 @@ package com.adf.pirobinetterie.model
 
 /**
  * Un champ affiché sur la fiche. [cle] = libellé normalisé de la colonne Excel correspondante
- * (voir [cle]), [liste] = clé de la liste déroulante de l'onglet DATA proposée à la saisie.
+ * (voir [cle]), [liste] = clé de la liste déroulante de l'onglet DATA proposée à la saisie,
+ * [court] = libellé imprimé dans le PDF (celui de l'onglet Fiche).
  */
-class Champ(val cle: String, val libelle: String, val liste: String? = null)
+class Champ(val cle: String, val libelle: String, val liste: String? = null, val court: String = libelle)
 
 /** Clés des listes de l'onglet DATA (ligne 5 : Type, Description, DN, Série...). */
 object Listes {
@@ -12,6 +13,7 @@ object Listes {
     const val DESCRIPTION = "description"
     const val DN = "dn"
     const val SERIE = "serie"
+    const val FACE = "face"
     const val MATIERE_JOINT = "matierejt"
     const val EQUIPE = "equipe"
     const val OBTURATEUR = "obturateur"
@@ -33,55 +35,75 @@ object ChampsFiche {
     const val TYPE = "type"
     const val COMMENTAIRE = "commentaire"
 
+    /** Lignes 26 à 33 de la Fiche. */
     val donneesTechniques = listOf(
         Champ(UNITE, "Unité / Zone"),
-        Champ(TYPE, "Famille", Listes.TYPE),
-        Champ("hauteur", "Hauteur / Niveau"),
-        Champ("lienautreitem", "Item à côté"),
+        Champ("chronoiso", "Chrono ISO"),
+        Champ(TYPE, "Type", Listes.TYPE),
+        Champ("travaux", "Travaux", Listes.DESCRIPTION),
+        Champ("equipementmaitre", "Equipement Maitre"),
         Champ("nligne", "N° Ligne"),
         Champ("nopergraph", "N° Opergraph"),
         Champ("specligne", "Classe tuyauterie")
     )
 
+    /** Lignes 35 à 40 de la Fiche. */
     val besoins = listOf(
+        Champ("hauteur", "Hauteur / Niveau"),
+        Champ("poids", "Poids"),
         Champ("echaf", "Besoin echaf", Listes.OUI_NON),
         Champ("calo", "Besoin calo", Listes.OUI_NON),
         Champ("levage", "Besoin Levage", Listes.LEVAGE),
-        Champ("besoinpotence", "Besoin potence", Listes.OUI_NON)
+        Champ("potence", "Besoin potence", Listes.OUI_NON)
     )
 
-    val travaux = listOf(
-        Champ("travaux", "Travaux", Listes.DESCRIPTION),
-        Champ("nettoyage", "Nettoyage", Listes.OUI_NON),
+    /** Lignes 42 à 45 de la Fiche. */
+    val divers = listOf(
         Champ("tracing", "Traçage", Listes.TRACAGE),
         Champ("boitearessort", "Boite à Ressort", Listes.OUI_NON),
-        Champ("ariepi", "EPI"),
-        Champ("raat", "RAAT Plomb/Amiante", Listes.OUI_NON)
+        Champ("somf", "SOMF", Listes.OUI_NON),
+        Champ("ariepi", "EPI")
     )
 
     val commentaire = Champ(COMMENTAIRE, "Commentaire")
 
     /**
-     * Champs de la Fiche absents de l'onglet Suivi d'origine : ajoutés en fin de ligne d'en-têtes
-     * de Suivi à l'export (clé -> libellé écrit dans l'Excel), seulement s'ils sont renseignés.
+     * Champs de la Fiche qui peuvent manquer dans un onglet Suivi plus ancien : ajoutés en fin de
+     * ligne d'en-têtes à l'export (clé -> libellé écrit dans l'Excel), seulement s'ils sont renseignés.
      */
     val colonnesAjoutees = linkedMapOf(
+        "chronoiso" to "Chrono ISO",
+        "equipementmaitre" to "Equipement Maitre",
         "nligne" to "N° Ligne",
         "nopergraph" to "N° Opergraph",
-        "besoinpotence" to "Besoin potence"
+        "specligne" to "SPEC ligne",
+        "hauteur" to "HAUTEUR",
+        "poids" to "POIDS",
+        "potence" to "Potence",
+        "somf" to "SOMF"
     )
 
     /** Toutes les clés affichées sur la Fiche (les autres colonnes Suivi vont dans "Autres infos"). */
     val clesFiche: Set<String> =
-        (donneesTechniques + besoins + travaux + commentaire).map { it.cle }.toSet() + setOf(NOM, REV)
+        (donneesTechniques + besoins + divers + commentaire).map { it.cle }.toSet() + setOf(NOM, REV)
 
     /** Liste DATA proposée pour une colonne Suivi hors Fiche. */
     fun listePour(cleSuivi: String): String? = when (cleSuivi) {
         "equipe" -> Listes.EQUIPE
-        "somf" -> Listes.OUI_NON
-        else -> (donneesTechniques + besoins + travaux).firstOrNull { it.cle == cleSuivi }?.liste
+        "nettoyage", "raat" -> Listes.OUI_NON
+        else -> (donneesTechniques + besoins + divers).firstOrNull { it.cle == cleSuivi }?.liste
+    }
+
+    /** Libellés de colonnes Suivi ramenés à une clé unique ("Item" et "Nom" = nom de l'item). */
+    fun alias(cle: String): String = when (cle) {
+        "item" -> NOM
+        "besoinpotence" -> "potence"
+        else -> cle
     }
 }
+
+/** Groupe de colonnes du tableau des brides de la Fiche (JOINT, BRIDE, TIGES FILETÉES, RAAT). */
+class GroupeColonnes(val libelle: String, val colonnes: List<Champ>)
 
 /** Colonnes de l'onglet Matos (une ligne par bride) et leur libellé sur la Fiche. */
 object ChampsBride {
@@ -94,6 +116,7 @@ object ChampsBride {
     const val PN = "pn"
     const val SERRAGE = "serrage"
     const val MATIERE_JOINT = "matierej"
+    const val FACE = "face"
     const val RONDELLE = "rondelle"
     const val LG = "lgb"
     const val DIAM = "diamb"
@@ -101,32 +124,48 @@ object ChampsBride {
     const val QTE = "qteb"
     const val OBTURATION = "obturation"
     const val MATIERE_TIGE = "matiereb"
+    const val RAAT = "raat"
 
-    /** Colonnes du tableau des brides de la Fiche, dans l'ordre (colonnes C à M). */
-    val colonnesFiche = listOf(
-        Champ(DN, "DN", Listes.DN),
-        Champ(PN, "PN", Listes.SERIE),
-        Champ(QTE, "Qté TF"),
-        Champ(MATIERE_JOINT, "Matière Jt", Listes.MATIERE_JOINT),
-        Champ(OBTURATION, "Obturation", Listes.OBTURATEUR),
-        Champ(SERRAGE, "Serrage"),
-        Champ(LG, "Lg TF"),
-        Champ(DIAM, "Diam TF", Listes.DIAM_TIGE),
-        Champ(MATIERE_TIGE, "Matière TF", Listes.MATIERE_TIGE),
-        Champ(RONDELLE, "Rondelle", Listes.OUI_NON),
-        Champ(NEUF, "Neuf TF", Listes.OUI_NON)
+    /** Tableau des brides de la Fiche (lignes 47-48), colonnes C à M. */
+    val groupesFiche = listOf(
+        GroupeColonnes("JOINT", listOf(
+            Champ(DN, "DN", Listes.DN),
+            Champ(PN, "PN", Listes.SERIE),
+            Champ(MATIERE_JOINT, "Matière joint", Listes.MATIERE_JOINT, court = "Matière")
+        )),
+        GroupeColonnes("BRIDE", listOf(
+            Champ(FACE, "Face", Listes.FACE),
+            Champ(OBTURATION, "Obtur", Listes.OBTURATEUR),
+            Champ(SERRAGE, "Serrage")
+        )),
+        GroupeColonnes("TIGES FILETÉES", listOf(
+            Champ(LG, "Lg tiges", court = "Lg"),
+            Champ(DIAM, "Diam tiges", Listes.DIAM_TIGE, court = "Diam"),
+            Champ(MATIERE_TIGE, "Matière tiges", Listes.MATIERE_TIGE, court = "Matière"),
+            Champ(RONDELLE, "Rondelle", Listes.OUI_NON)
+        )),
+        GroupeColonnes("RAAT", listOf(Champ(RAAT, "RAAT", Listes.OUI_NON)))
     )
+
+    val colonnesFiche: List<Champ> = groupesFiche.flatMap { it.colonnes }
 
     /** Colonnes éditables sur la tablette (colonnes de la Fiche + repère/désignation). */
     val colonnesEdition = listOf(Champ(REP, "Rep."), Champ(DESIGNATION, "Désignation")) + colonnesFiche
 
-    /** Libellés par défaut de l'onglet Matos (si l'onglet importé n'a pas la colonne). */
-    val libellesMatos = linkedMapOf(
-        UNITE to "Unité", FAMILLE to "Famille", ITEM to "Item", REP to "Rep.", DESIGNATION to "Désignation",
-        DN to "DN", PN to "PN", SERRAGE to "Serrage", MATIERE_JOINT to "MatièreJ", RONDELLE to "Rondelle",
-        LG to "LgB", DIAM to "DiamB", NEUF to "NeufB", QTE to "QteB", OBTURATION to "Obturation",
-        MATIERE_TIGE to "MatièreB"
-    )
+    /**
+     * Libellés de l'onglet Matos ramenés à une clé unique : les deux versions du fichier
+     * ("Famille"/"Type", "MatièreJ"/"Matière", "LgB"/"Lg"...) donnent les mêmes clés.
+     */
+    fun alias(cle: String): String = when (cle) {
+        "unitezone" -> UNITE
+        "type" -> FAMILLE
+        "matiere" -> MATIERE_JOINT
+        "matiere2" -> MATIERE_TIGE
+        "obtur" -> OBTURATION
+        "lg" -> LG
+        "diam" -> DIAM
+        else -> cle
+    }
 
     fun estOui(valeur: String): Boolean = cle(valeur) in setOf("o", "oui", "y", "yes", "x", "1")
 }

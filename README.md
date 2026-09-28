@@ -29,7 +29,7 @@ PI_Robinetterie/
     └── Excel/  PI_Rob_MAJ_20260925_143000.xlsm
 ```
 
-- Le nom de l'item est celui de la colonne **Nom** de l'onglet Suivi (« Rob 01 »).
+- Le nom de l'item est celui de la colonne **Item** de l'onglet Suivi (« Rob 01 »).
 - Les majuscules, espaces et `_` ne comptent pas : `rob01_photo.jpg` convient aussi.
 - Le plot plan peut aussi s'appeler `<item>_plot` ou `<item>_plotplan`.
 - Formats d'image acceptés : jpg, png, webp.
@@ -43,9 +43,10 @@ PI_Robinetterie/
      DATA ou saisir librement ;
    - **Photo** : « Prendre la photo » (appareil photo de la tablette) ou choisir un fichier ;
      **Plot plan** : « Remplacer le plot plan » ;
-   - **Brides** : ajout, suppression, modification. Qté / Diamètre / Longueur des tiges sont
-     calculés d'après l'**ABBAQUE** de l'onglet DATA dès que DN ou PN change (longueur RF + la
-     longueur de rondelle réglable si Rondelle = O). Toutes les valeurs restent modifiables ;
+   - **Brides** : ajout, suppression, modification. Le diamètre et la longueur des tiges sont
+     calculés d'après l'**ABBAQUE** de l'onglet DATA dès que DN, PN, Face ou Rondelle change
+     (longueur RTJ si Face = RTJ, RF sinon, + la longueur de rondelle réglable si Rondelle = O).
+     Toutes les valeurs restent modifiables ;
    - **Commentaire** : texte libre.
 3. **✔ VALIDER** : saisir l'objet de la révision (texte libre, « Initial » pour la Rév. 0).
    La révision est figée et son **PDF est généré** dans `Export/PDF`.
@@ -55,8 +56,7 @@ PI_Robinetterie/
 5. **Exporter Excel** : crée une copie mise à jour du fichier importé dans `Export/Excel`
    (le fichier d'origine n'est jamais modifié ; macros, mise en forme et autres onglets conservés) :
    - **Suivi** : une ligne par item. La colonne **Rév** porte le numéro de la dernière
-     révision : les lignes ne sont pas dupliquées. Les colonnes N° Ligne, N° Opergraph et
-     Besoin potence sont ajoutées si elles sont renseignées ;
+     révision : les lignes ne sont pas dupliquées ;
    - **Matos** : une ligne par bride ; les brides ajoutées ou supprimées sur la tablette sont
      reportées ;
    - **Instruction** : Client / Lieu / Unité / Année, s'ils ont été modifiés ;
@@ -68,14 +68,22 @@ de dossier de travail.
 
 ### Rendu PDF (A4 paysage, onglet « Fiche »)
 
-- En-tête : logo ADF, « Client - Lieu / Unité Année », nom de l'item, logo client.
-- Tableau des révisions : les 4 dernières.
-- Donnée technique, Besoins, Travaux.
-- À droite : **photo sur les 3/4 haut**, **localisation sur plot plan sur le 1/4 bas**.
-- Tableau des brides : DN, PN, Qté TF, Matière Jt, Obturation, Serrage, Lg TF, Diam TF,
-  Matière TF, Rondelle, Neuf TF, et Commentaire. Au-delà de 5 brides, l'item continue sur une
-  2ᵉ page.
+Même grille que l'onglet Fiche (colonnes A à T, lignes 1 à 53) :
+- **En-tête** (lignes 1-4) : logo ADF, « Client - Lieu / Unité Année », nom de l'item, logo client.
+- **Plot plan** (localisation) : sous le logo, au-dessus du tableau des révisions (A5:D18).
+- **Photo** : tout l'espace libre à droite (E5:T45).
+- **Révisions** (lignes 19-23) : les 4 dernières.
+- **Donnée technique** (Unité / Zone, Chrono ISO, Type, Travaux, Equipement Maitre, N° Ligne,
+  N° Opergraph, Classe tuyauterie), puis Hauteur, Poids, besoins échafaudage / calorifuge /
+  levage / potence, puis Traçage, Boite à ressort, SOMF, EPI.
+- **Brides** (lignes 47-53) : Rep. & Désignation | JOINT (DN, PN, Matière) | BRIDE (Face,
+  Obtur, Serrage) | TIGES FILETÉES (Lg, Diam, Matière, Rondelle) | RAAT, et le Commentaire de
+  l'item. Au-delà de 5 brides, l'item continue sur une 2ᵉ page.
 - **Numéro de page en bas à droite** (« 1/1 » s'il n'y a qu'une page).
+
+Les deux versions du fichier Excel sont acceptées : Suivi avec une colonne « Item » ou « Nom »,
+Matos avec « Unité / Zone, Type, Matière, Face, Obtur, Lg, Diam, Matière2, Rondelle, RAAT » ou
+les anciens libellés (« Famille, MatièreJ, LgB, DiamB… »).
 
 ## 3. Compiler l'APK (depuis GitHub, lancement manuel)
 

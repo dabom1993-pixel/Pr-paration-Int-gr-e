@@ -151,7 +151,12 @@ object ExcelExporter {
             val item = itemsParNom[cleItem]
             if (item != null) {
                 val diff = diffDerniere(item)
-                item.etatExporte().brides.forEach { sortie.add(it to diff) }
+                item.etatExporte().brides.forEach { b ->
+                    // Une bride appartient toujours à son item, même si la case Item est vide.
+                    val copie = b.copie()
+                    if (copie[ChampsBride.ITEM].isBlank()) copie[ChampsBride.ITEM] = item.nom
+                    sortie.add(copie to diff)
+                }
             } else {
                 orphelines[cleItem]?.forEach { sortie.add(it to Diff.VIDE) }
             }

@@ -23,16 +23,19 @@ class Abaque(val lignes: List<LigneAbaque>) {
     }
 
     /**
-     * Remplit Qté / Diamètre / Longueur de [bride] d'après l'abaque (longueur RF, + [rondelleMm]
-     * si la bride a des rondelles). Retourne false si le couple DN/PN est absent de l'abaque.
+     * Remplit Qté / Diamètre / Longueur de [bride] d'après l'abaque (longueur RTJ si la face est
+     * RTJ, RF sinon, + [rondelleMm] si la bride a des rondelles). Retourne false si le couple
+     * DN/PN est absent de l'abaque.
      */
     fun calcule(bride: Bride, rondelleMm: Double): Boolean {
         val ligne = cherche(bride[ChampsBride.DN], bride[ChampsBride.PN]) ?: return false
         bride[ChampsBride.QTE] = ligne.nbTiges
         bride[ChampsBride.DIAM] = ligne.diametre
-        val lg = ligne.longueurRf.replace(',', '.').toDoubleOrNull()
+        val texteLg = if (cle(bride[ChampsBride.FACE]) == "rtj" && ligne.longueurRtj.replace(',', '.').toDoubleOrNull() != null)
+            ligne.longueurRtj else ligne.longueurRf
+        val lg = texteLg.replace(',', '.').toDoubleOrNull()
         bride[ChampsBride.LG] = when {
-            lg == null -> ligne.longueurRf
+            lg == null -> texteLg
             ChampsBride.estOui(bride[ChampsBride.RONDELLE]) -> nombre(lg + rondelleMm)
             else -> nombre(lg)
         }

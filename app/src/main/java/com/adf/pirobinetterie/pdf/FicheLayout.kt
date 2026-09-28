@@ -75,7 +75,7 @@ class DonneesFiche(
 }
 
 /**
- * Mise en page de l'onglet "Fiche" (A4 paysage) : même grille de colonnes A→Q et de lignes 1→37
+ * Mise en page de l'onglet "Fiche" (A4 paysage) : même grille de colonnes A→T et de lignes 1→53
  * que l'Excel. 5 brides par page ; au-delà, pages suivantes avec le même en-tête. Numéro de page
  * en bas à droite ("1/1" s'il n'y a qu'une page).
  */
@@ -97,18 +97,30 @@ object FicheLayout {
     private const val LIBELLE = 0xFFEEF1F6.toInt()
     const val JAUNE = 0xFFFFFF00.toInt()
 
-    /** Largeurs des colonnes A..Q de l'onglet Fiche (unités Excel). */
-    private val largeursCol = floatArrayOf(4.86f, 10.86f, 9.14f, 9.14f, 8f, 8f, 8f, 8f, 8f, 8f, 8f, 8f, 7f, 9.14f, 9.14f, 9.14f, 9.14f)
-    private const val NB_LIGNES = 37
-    private fun hauteurLigne(l: Int) = if (l == 32) 30f else 15f
+    /** Largeurs des colonnes A..T de l'onglet Fiche (unités Excel). */
+    private val largeursCol = floatArrayOf(
+        4.86f, 17.14f, 9.86f,                                              // A B C
+        9.14f, 9.14f, 9.14f, 9.14f, 9.14f, 9.14f, 9.14f, 9.14f, 9.14f, 9.14f, // D..M
+        7f,                                                                // N
+        9.14f, 9.14f, 9.14f, 9.14f, 9.14f, 9.14f                           // O..T
+    )
+    private const val NB_LIGNES = 53
+    private const val HAUTEUR_LIGNE = 15f
+
+    // Colonnes (1 = A) et lignes de l'onglet Fiche.
+    private const val COL_T = 20
+    private const val COL_PREMIERE_BRIDE = 3   // C
+    private const val COL_COMMENTAIRE = 15     // O
+    private const val LIGNE_BRIDES_P1 = 47     // titres de groupes (JOINT, BRIDE...) en page 1
+    private const val LIGNE_BRIDES_SUITE = 6   // idem sur les pages suivantes
 
     private val sx = (LARGEUR - 2 * MARGE_X) / largeursCol.sum()
-    private val sy = (HAUTEUR - MARGE_HAUT - MARGE_BAS) / (1..NB_LIGNES).sumOf { hauteurLigne(it).toDouble() }.toFloat()
+    private val sy = (HAUTEUR - MARGE_HAUT - MARGE_BAS) / (NB_LIGNES * HAUTEUR_LIGNE)
 
     /** Abscisse du bord gauche de la colonne [c] (1 = A). */
     private fun x(c: Int): Float = MARGE_X + largeursCol.take(c - 1).sum() * sx
     /** Ordonnée du bord haut de la ligne [l] (1 = ligne 1). */
-    private fun y(l: Int): Float = MARGE_HAUT + (1 until l).sumOf { hauteurLigne(it).toDouble() }.toFloat() * sy
+    private fun y(l: Int): Float = MARGE_HAUT + (l - 1) * HAUTEUR_LIGNE * sy
 
     /** Rectangle couvrant des cellules fusionnées (colonnes c1 à c2, lignes l1 à l2). */
     private class Zone(val x: Float, val y: Float, val w: Float, val h: Float)
@@ -122,12 +134,12 @@ object FicheLayout {
         enTete(t, d)
         val brides = d.brides.drop(page * BRIDES_PAR_PAGE).take(BRIDES_PAR_PAGE)
         if (page == 0) {
+            images(t, d)
             revisions(t, d)
             champs(t, d)
-            images(t, d)
-            tableauBrides(t, d, brides, 32)
+            tableauBrides(t, d, brides, LIGNE_BRIDES_P1)
         } else {
-            tableauBrides(t, d, brides, 5)
+            tableauBrides(t, d, brides, LIGNE_BRIDES_SUITE)
         }
         // Pied de page : révision à gauche, numéro de page à droite.
         val yPied = HAUTEUR - 9f
@@ -136,65 +148,38 @@ object FicheLayout {
         t.texte(num, LARGEUR - MARGE_X - t.largeurTexte(num, 9f, true), yPied, 9f, true, NOIR)
     }
 
+    /** Lignes 1 à 4 : logo ADF (A:B), titre (C:K), item (L:R), logo client (S:T). */
     private fun enTete(t: Toile, d: DonneesFiche) {
-        val logo = zone(1, 1, 2, 3)
+        val logo = zone(1, 1, 2, 4)
         cadre(t, logo)
-        d.logoAdf?.let { t.image(it, logo.x + 2, logo.y + 2, logo.w - 4, logo.h - 4) }
+        d.logoAdf?.let { t.image(it, logo.x + 3, logo.y + 3, logo.w - 6, logo.h - 6) }
 
-        val titre = zone(3, 1, 11, 3)
+        val titre = zone(3, 1, 11, 4)
         cadre(t, titre)
-        boite(t, d.titre, titre, 12f, true, Aligne.CENTRE)
+        boite(t, d.titre, titre, 13f, true, Aligne.CENTRE)
 
-        val item = zone(12, 1, 15, 3)
+        val item = zone(12, 1, 18, 4)
         cadre(t, item)
-        boite(t, d.item, item, 16f, true, Aligne.CENTRE)
+        boite(t, d.item, item, 18f, true, Aligne.CENTRE)
 
-        val client = zone(16, 1, 17, 3)
+        val client = zone(19, 1, COL_T, 4)
         cadre(t, client)
         val logoClient = d.logoClient
-        if (logoClient == null || !t.image(logoClient, client.x + 2, client.y + 2, client.w - 4, client.h - 4)) {
+        if (logoClient == null || !t.image(logoClient, client.x + 3, client.y + 3, client.w - 6, client.h - 6)) {
             boite(t, "LOGO CLIENT", client, 7f, false, Aligne.CENTRE, GRIS_TEXTE)
         }
     }
 
-    private fun revisions(t: Toile, d: DonneesFiche) {
-        cellule(t, zone(1, 5), "Rev", fond = MARINE, gras = true, couleur = BLANC, aligne = Aligne.CENTRE)
-        cellule(t, zone(2, 5), "Date", fond = MARINE, gras = true, couleur = BLANC, aligne = Aligne.CENTRE)
-        cellule(t, zone(3, 5, 4, 5), "Objet Rev", fond = MARINE, gras = true, couleur = BLANC, aligne = Aligne.CENTRE)
-        for (i in 0 until 4) {
-            val r = d.revisions.getOrNull(i)
-            val l = 6 + i
-            cellule(t, zone(1, l), r?.num?.toString().orEmpty(), aligne = Aligne.CENTRE)
-            cellule(t, zone(2, l), r?.date.orEmpty(), aligne = Aligne.CENTRE)
-            cellule(t, zone(3, l, 4, l), r?.objet.orEmpty())
-        }
-    }
-
-    private fun champs(t: Toile, d: DonneesFiche) {
-        cellule(t, zone(1, 11, 4, 11), "Donnée technique", fond = MARINE, gras = true, couleur = BLANC)
-        fun ligne(l: Int, champ: Champ) {
-            cellule(t, zone(1, l, 2, l), champ.libelle, fond = LIBELLE, gras = true)
-            val jaune = champ.cle in d.jaunes
-            cellule(t, zone(3, l, 4, l), d.valeurs[champ.cle].orEmpty(), fond = if (jaune) JAUNE else null)
-        }
-        ChampsFiche.donneesTechniques.forEachIndexed { i, c -> ligne(12 + i, c) }
-        ChampsFiche.besoins.forEachIndexed { i, c -> ligne(20 + i, c) }
-        ChampsFiche.travaux.forEachIndexed { i, c -> ligne(25 + i, c) }
-    }
-
-    /** Zone E4:Q30 : photo sur les 3/4 haut, localisation sur plot plan sur le 1/4 bas. */
+    /**
+     * Plot plan : espace sous le logo, au-dessus du tableau des révisions (A5:D18).
+     * Photo : tout le reste libre de la page, à droite (E5:T45).
+     */
     private fun images(t: Toile, d: DonneesFiche) {
-        val z = zone(5, 4, 17, 30)
-        val marge = 4f
-        val x0 = z.x + marge
-        val w = z.w - marge
-        val hTotal = z.h - marge
-        val hPhoto = hTotal * 0.75f - 2f
-        val hPlan = hTotal * 0.25f - 2f
-        val yPhoto = z.y + marge / 2
-        val yPlan = yPhoto + hPhoto + 4f
-        image(t, d.photo, "Photo", Zone(x0, yPhoto, w, hPhoto), d.photoJaune)
-        image(t, d.plan, "Localisation sur plot plan", Zone(x0, yPlan, w, hPlan), d.planJaune)
+        val m = 3f
+        val plan = zone(1, 5, 4, 18)
+        image(t, d.plan, "Localisation sur plot plan", Zone(plan.x, plan.y + m, plan.w, plan.h - 2 * m), d.planJaune)
+        val photo = zone(5, 5, COL_T, 45)
+        image(t, d.photo, "Photo", Zone(photo.x + 2 * m, photo.y + m, photo.w - 2 * m, photo.h - 2 * m), d.photoJaune)
     }
 
     private fun image(t: Toile, chemin: String, legende: String, z: Zone, jaune: Boolean) {
@@ -208,34 +193,72 @@ object FicheLayout {
         t.texte(legende, z.x + 3f, z.y + 7.5f, 7f, true, MARINE)
     }
 
-    private fun tableauBrides(t: Toile, d: DonneesFiche, brides: List<LigneBride>, ligneEnTete: Int) {
-        val colonnes = ChampsBride.colonnesFiche
-        val ze = Zone(x(1), y(ligneEnTete), x(3) - x(1), 30f * sy)
-        cellule(t, ze, "Bride", fond = MARINE, gras = true, couleur = BLANC, aligne = Aligne.CENTRE)
-        colonnes.forEachIndexed { i, c ->
-            cellule(t, Zone(x(3 + i), ze.y, x(4 + i) - x(3 + i), ze.h), c.libelle, fond = MARINE, gras = true, couleur = BLANC, aligne = Aligne.CENTRE)
+    /** Lignes 19 à 23 : Rev / Date / Objet Rev (4 dernières révisions). */
+    private fun revisions(t: Toile, d: DonneesFiche) {
+        cellule(t, zone(1, 19), "Rev", fond = MARINE, gras = true, couleur = BLANC, aligne = Aligne.CENTRE)
+        cellule(t, zone(2, 19), "Date", fond = MARINE, gras = true, couleur = BLANC, aligne = Aligne.CENTRE)
+        cellule(t, zone(3, 19, 4, 19), "Objet Rev", fond = MARINE, gras = true, couleur = BLANC, aligne = Aligne.CENTRE)
+        for (i in 0 until 4) {
+            val r = d.revisions.getOrNull(i)
+            val l = 20 + i
+            cellule(t, zone(1, l), r?.num?.toString().orEmpty(), aligne = Aligne.CENTRE)
+            cellule(t, zone(2, l), r?.date.orEmpty(), aligne = Aligne.CENTRE)
+            cellule(t, zone(3, l, 4, l), r?.objet.orEmpty())
         }
-        cellule(t, Zone(x(14), ze.y, x(18) - x(14), ze.h), "Commentaire", fond = MARINE, gras = true, couleur = BLANC, aligne = Aligne.CENTRE)
+    }
 
-        val hLigne = 15f * sy
-        val y0 = ze.y + ze.h
+    /** Lignes 25 à 45 : Donnée technique (26-33), besoins (35-40), traçage... EPI (42-45). */
+    private fun champs(t: Toile, d: DonneesFiche) {
+        cellule(t, zone(1, 25, 4, 25), "Donnée technique", fond = MARINE, gras = true, couleur = BLANC)
+        fun ligne(l: Int, champ: Champ) {
+            cellule(t, zone(1, l, 2, l), champ.court, fond = LIBELLE, gras = true)
+            val jaune = champ.cle in d.jaunes
+            cellule(t, zone(3, l, 4, l), d.valeurs[champ.cle].orEmpty(), fond = if (jaune) JAUNE else null)
+        }
+        ChampsFiche.donneesTechniques.forEachIndexed { i, c -> ligne(26 + i, c) }
+        ChampsFiche.besoins.forEachIndexed { i, c -> ligne(35 + i, c) }
+        ChampsFiche.divers.forEachIndexed { i, c -> ligne(42 + i, c) }
+    }
+
+    /**
+     * Tableau des brides : ligne [l0] = groupes (JOINT, BRIDE, TIGES FILETÉES, RAAT), ligne l0+1 =
+     * colonnes, puis 5 lignes de brides. Commentaire de l'item en O:T (colonne N laissée vide).
+     */
+    private fun tableauBrides(t: Toile, d: DonneesFiche, brides: List<LigneBride>, l0: Int) {
+        fun entete(z: Zone, texte: String) = cellule(t, z, texte, fond = MARINE, gras = true, couleur = BLANC, aligne = Aligne.CENTRE)
+
+        entete(zone(1, l0, 2, l0 + 1), "Rep. & Désignation")
+        var col = COL_PREMIERE_BRIDE
+        for (g in ChampsBride.groupesFiche) {
+            val fin = col + g.colonnes.size - 1
+            if (g.colonnes.size == 1 && g.colonnes[0].court.equals(g.libelle, ignoreCase = true)) {
+                entete(zone(col, l0, col, l0 + 1), g.libelle)
+            } else {
+                entete(zone(col, l0, fin, l0), g.libelle)
+                g.colonnes.forEachIndexed { i, c -> entete(zone(col + i, l0 + 1), c.court) }
+            }
+            col = fin + 1
+        }
+        entete(zone(COL_COMMENTAIRE, l0, COL_T, l0), "Commentaire")
+
+        val colonnes = ChampsBride.colonnesFiche
         for (i in 0 until BRIDES_PAR_PAGE) {
             val b = brides.getOrNull(i)
-            val yl = y0 + i * hLigne
+            val l = l0 + 2 + i
             val libelle = when {
                 b == null -> ""
                 b.designation.isBlank() -> b.repere
                 else -> "${b.repere} — ${b.designation}"
             }
-            cellule(t, Zone(x(1), yl, x(3) - x(1), hLigne), libelle, fond = if (b?.reperJaune == true) JAUNE else LIBELLE, gras = true)
+            cellule(t, zone(1, l, 2, l), libelle, fond = if (b?.reperJaune == true) JAUNE else LIBELLE, gras = true)
             colonnes.indices.forEach { c ->
                 val jaune = b?.jaunes?.getOrNull(c) == true
-                cellule(t, Zone(x(3 + c), yl, x(4 + c) - x(3 + c), hLigne), b?.valeurs?.getOrNull(c).orEmpty(),
+                cellule(t, zone(COL_PREMIERE_BRIDE + c, l), b?.valeurs?.getOrNull(c).orEmpty(),
                     fond = if (jaune) JAUNE else null, aligne = Aligne.CENTRE)
             }
         }
-        // Commentaire (cellules N:Q fusionnées sur les 5 lignes de brides).
-        val zc = Zone(x(14), y0, x(18) - x(14), hLigne * BRIDES_PAR_PAGE)
+        // Commentaire (cellules O:T fusionnées, de la ligne des colonnes à la dernière bride).
+        val zc = zone(COL_COMMENTAIRE, l0 + 1, COL_T, l0 + 1 + BRIDES_PAR_PAGE)
         val jaune = ChampsFiche.COMMENTAIRE in d.jaunes
         cellule(t, zc, d.valeurs[ChampsFiche.COMMENTAIRE].orEmpty(), fond = if (jaune) JAUNE else null, haut = true)
     }
@@ -251,7 +274,7 @@ object FicheLayout {
         aligne: Aligne = Aligne.GAUCHE, haut: Boolean = false
     ) {
         t.rect(z.x, z.y, z.w, z.h, fond, BORDURE, 0.5f)
-        boite(t, texte, z, 8f, gras, aligne, couleur, haut)
+        boite(t, texte, z, 7.5f, gras, aligne, couleur, haut)
     }
 
     /** Texte ajusté dans la zone : retour à la ligne, puis réduction de la police si nécessaire. */

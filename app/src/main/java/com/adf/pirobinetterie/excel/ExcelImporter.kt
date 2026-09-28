@@ -43,7 +43,7 @@ object ExcelImporter {
             val enTetesMatos = enTetesMatos(matos)
                 ?: throw ImportException("Ligne d'en-têtes introuvable dans \"$ONGLET_MATOS\" (colonnes Unité / Item / Rep. attendues).")
             val enTetesSuivi = enTetesSuivi(suivi)
-                ?: throw ImportException("Ligne d'en-têtes introuvable dans \"$ONGLET_SUIVI\" (colonnes Nom / Travaux attendues).")
+                ?: throw ImportException("Ligne d'en-têtes introuvable dans \"$ONGLET_SUIVI\" (colonnes Item / Travaux attendues).")
 
             val brides = lireLignes(matos, enTetesMatos)
                 .filter { !it[ChampsBride.ITEM].isNullOrBlank() }
@@ -88,15 +88,26 @@ object ExcelImporter {
 
     // --- En-têtes -------------------------------------------------------------------------
 
-    private fun enTetes(feuille: Feuille, ligne: Int): EnTetes {
+    /**
+     * [alias] ramène les libellés des différentes versions du fichier à une même clé. Une colonne
+     * sans vrai titre ("Colonne3") prend le titre de groupe écrit juste au-dessus ("RAAT").
+     */
+    private fun enTetes(feuille: Feuille, ligne: Int, alias: (String) -> String): EnTetes {
         val colonnes = LinkedHashMap<Int, String>()
         val libelles = LinkedHashMap<String, String>()
-        for ((col, texte) in feuille.ligne(ligne)) {
-            var k = cle(texte)
-            if (k.isEmpty()) continue
-            // Libellé en double : on garde les deux colonnes, la seconde suffixée.
+        for ((col, brut) in feuille.ligne(ligne)) {
+            var texte = brut
+            if (Regex("colonne\\d*").matches(cle(texte))) {
+                texte = feuille.valeur(ligne - 1, col).ifBlank { texte }
+            }
+            val base = alias(cle(texte))
+            if (base.isEmpty()) continue
+            var k = base
+            // Deuxième "Matière" d'une ligne Matos = matière des tiges.
+            if (k in libelles && k == ChampsBride.MATIERE_JOINT) k = ChampsBride.MATIERE_TIGE
+            // Autre libellé en double : on garde les deux colonnes, la seconde suffixée.
             var n = 2
-            while (k in libelles) k = cle(texte) + "_" + n++
+            while (k in libelles) k = base + "_" + n++
             colonnes[col] = k
             libelles[k] = texte.replace('\n', ' ').trim()
         }
@@ -105,22 +116,24 @@ object ExcelImporter {
 
     fun enTetesMatos(feuille: Feuille): EnTetes? {
         for (ligne in feuille.lignes.keys.filter { it <= 30 }) {
-            val cles = feuille.ligne(ligne).values.map { cle(it) }.toSet()
-            if (ChampsBride.UNITE in cles && ChampsBride.ITEM in cles && ChampsBride.REP in cles) return enTetes(feuille, ligne)
+            val cles = feuille.ligne(ligne).values.map { ChampsBride.alias(cle(it)) }.toSet()
+            if (ChampsBride.UNITE in cles && ChampsBride.ITEM in cles && ChampsBride.REP in cles) {
+                return enTetes(feuille, ligne, ChampsBride::alias)
+            }
         }
         return null
     }
 
     /**
      * Suivi a deux lignes d'en-têtes (abrégés en ligne 3, libellés complets en ligne 4) : on
-     * retient la dernière ligne contenant "Nom" et "Travaux".
+     * retient la dernière ligne contenant "Item" (ou "Nom") et "Travaux".
      */
     fun enTetesSuivi(feuille: Feuille): EnTetes? {
         val candidates = feuille.lignes.keys.filter { it <= 30 }.filter { ligne ->
-            val cles = feuille.ligne(ligne).values.map { cle(it) }.toSet()
+            val cles = feuille.ligne(ligne).values.map { ChampsFiche.alias(cle(it)) }.toSet()
             ChampsFiche.NOM in cles && "travaux" in cles
         }
-        return candidates.maxOrNull()?.let { enTetes(feuille, it) }
+        return candidates.maxOrNull()?.let { enTetes(feuille, it, ChampsFiche::alias) }
     }
 
     /** Lignes de données situées sous la ligne d'en-têtes (clé de colonne -> valeur). */
