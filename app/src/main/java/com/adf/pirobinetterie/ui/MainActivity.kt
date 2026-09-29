@@ -48,6 +48,8 @@ class MainActivity : Activity() {
     private lateinit var vide: TextView
     private val filtres = mutableMapOf<String, TextView>()
     private var filtre = "Tous"
+    private lateinit var boutonUnites: TextView
+    private lateinit var boutonFamilles: TextView
     private val adaptateur = Adaptateur()
 
     /** Import à lancer juste après le choix du dossier de travail. */
@@ -129,6 +131,18 @@ class MainActivity : Activity() {
             })
         }
         barreFiltres.addView(recherche, lp(0, WRAP, 1f))
+        boutonUnites = texte("", 16f, true).apply {
+            gravity = Gravity.CENTER
+            setPadding(dp(16), dp(10), dp(16), dp(10))
+            setOnClickListener { choisirSelection(SEL_UNITES) }
+        }
+        barreFiltres.addView(boutonUnites, lp(WRAP, WRAP).marges(dp(12), 0, 0, 0))
+        boutonFamilles = texte("", 16f, true).apply {
+            gravity = Gravity.CENTER
+            setPadding(dp(16), dp(10), dp(16), dp(10))
+            setOnClickListener { choisirSelection(SEL_FAMILLES) }
+        }
+        barreFiltres.addView(boutonFamilles, lp(WRAP, WRAP).marges(dp(8), 0, dp(8), 0))
         for (f in listOf("Tous", "À valider", "En cours", "Validés")) {
             val t = texte(f, 16f, true).apply {
                 gravity = Gravity.CENTER
@@ -169,11 +183,70 @@ class MainActivity : Activity() {
     }
 
     private fun majFiltres() {
-        for ((nom, t) in filtres) {
-            val actif = nom == filtre
+        fun style(t: TextView, actif: Boolean) {
             t.setTextColor(if (actif) Color.WHITE else Couleurs.MARINE)
             t.background = fondArrondi(if (actif) Couleurs.MARINE else Color.WHITE, dp(20).toFloat(), Couleurs.MARINE, dp(1))
         }
+        for ((nom, t) in filtres) style(t, nom == filtre)
+        if (::boutonUnites.isInitialized) {
+            val unites = selectionEffective(SEL_UNITES)
+            val familles = selectionEffective(SEL_FAMILLES)
+            boutonUnites.text = libelleSelection("Unité", unites)
+            boutonFamilles.text = libelleSelection("Famille", familles)
+            style(boutonUnites, unites.isNotEmpty())
+            style(boutonFamilles, familles.isNotEmpty())
+        }
+    }
+
+    // --- Filtres par unité(s) et par famille(s) --------------------------------------------
+
+    private val prefsFiltres by lazy { getSharedPreferences("filtres", MODE_PRIVATE) }
+
+    /** Valeur d'un item pour le filtre (unité ou famille = colonne Type de Suivi). */
+    private fun valeurFiltre(item: Item, genre: String): String =
+        item[if (genre == SEL_UNITES) ChampsFiche.UNITE else ChampsFiche.TYPE].trim().ifEmpty { NON_RENSEIGNE }
+
+    /** Valeurs présentes dans le projet, avec leur nombre d'items. */
+    private fun valeursDisponibles(genre: String): List<Pair<String, Int>> =
+        depot.projet?.items.orEmpty().groupingBy { valeurFiltre(it, genre) }.eachCount()
+            .toList().sortedWith(compareBy({ it.first == NON_RENSEIGNE }, { it.first.lowercase() }))
+
+    /** Sélection enregistrée, limitée aux valeurs encore présentes (vide = tout afficher). */
+    private fun selectionEffective(genre: String): Set<String> {
+        val presentes = valeursDisponibles(genre).map { it.first }.toSet()
+        return prefsFiltres.getStringSet(genre, emptySet()).orEmpty().filter { it in presentes }.toSet()
+    }
+
+    private fun libelleSelection(nom: String, selection: Set<String>): String = when (selection.size) {
+        0 -> "$nom : toutes"
+        1 -> "$nom : ${selection.first()}"
+        else -> "$nom : ${selection.size}"
+    }
+
+    private fun choisirSelection(genre: String) {
+        val valeurs = valeursDisponibles(genre)
+        val titre = if (genre == SEL_UNITES) "Filtrer par unité(s)" else "Filtrer par famille(s)"
+        if (valeurs.isEmpty()) {
+            message(titre, "Aucun projet importé.")
+            return
+        }
+        val courante = selectionEffective(genre)
+        val coches = BooleanArray(valeurs.size) { valeurs[it].first in courante }
+        AlertDialog.Builder(this)
+            .setTitle("$titre — rien de coché = tout afficher")
+            .setMultiChoiceItems(valeurs.map { "${it.first}   (${it.second})" }.toTypedArray(), coches) { _, i, coche -> coches[i] = coche }
+            .setPositiveButton("Appliquer") { _, _ ->
+                enregistrerSelection(genre, valeurs.indices.filter { coches[it] }.map { valeurs[it].first }.toSet())
+            }
+            .setNeutralButton("Tout afficher") { _, _ -> enregistrerSelection(genre, emptySet()) }
+            .setNegativeButton("Annuler", null)
+            .show()
+    }
+
+    private fun enregistrerSelection(genre: String, selection: Set<String>) {
+        prefsFiltres.edit().putStringSet(genre, selection).apply()
+        majFiltres()
+        adaptateur.filtrer()
     }
 
     private fun rafraichir() {
@@ -195,8 +268,9 @@ class MainActivity : Activity() {
             resume.text = "${p.items.size} items  ·  ${parStatut[Statut.VALIDE] ?: 0} validés  ·  " +
                 "${(parStatut[Statut.EN_COURS] ?: 0) + (parStatut[Statut.REVISION_EN_COURS] ?: 0)} en cours  ·  " +
                 "${parStatut[Statut.A_VALIDER] ?: 0} à valider      Dossier : $dossier"
-            vide.text = "Aucun item ne correspond au filtre."
+            vide.text = "Aucun item ne correspond aux filtres (statut, unité, famille, recherche)."
         }
+        majFiltres()
         adaptateur.filtrer()
     }
 
@@ -208,7 +282,11 @@ class MainActivity : Activity() {
         fun filtrer() {
             val p = depot.projet
             val q = if (::recherche.isInitialized) recherche.text.toString().trim().lowercase() else ""
+            val unites = selectionEffective(SEL_UNITES)
+            val familles = selectionEffective(SEL_FAMILLES)
             items = p?.items.orEmpty().filter { item ->
+                if (unites.isNotEmpty() && valeurFiltre(item, SEL_UNITES) !in unites) return@filter false
+                if (familles.isNotEmpty() && valeurFiltre(item, SEL_FAMILLES) !in familles) return@filter false
                 val statutOk = when (filtre) {
                     "À valider" -> item.statut() == Statut.A_VALIDER
                     "En cours" -> item.statut() == Statut.EN_COURS || item.statut() == Statut.REVISION_EN_COURS
@@ -503,5 +581,8 @@ class MainActivity : Activity() {
 
     companion object {
         private const val REQ_DOSSIER = 1
+        private const val SEL_UNITES = "unites"
+        private const val SEL_FAMILLES = "familles"
+        private const val NON_RENSEIGNE = "(non renseigné)"
     }
 }

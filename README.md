@@ -38,7 +38,8 @@ PI_Robinetterie/
 
 1. **Importer** : au premier lancement, choisir le dossier `PI_Robinetterie` (une seule fois),
    puis le fichier Excel. Les photos et plots plans sont associés automatiquement à chaque item.
-2. Toucher un **item** pour ouvrir sa fiche récap (même organisation que l'onglet Fiche) :
+2. Filtrer la liste si besoin : boutons **Unité** et **Famille** (sélection multiple, rien de
+   coché = tout), statut (À valider / En cours / Validés) et recherche. Toucher un **item** pour ouvrir sa fiche récap (même organisation que l'onglet Fiche) :
    - toutes les cases sont modifiables : toucher la case, puis choisir dans la liste de l'onglet
      DATA ou saisir librement ;
    - **Photo** : « Prendre la photo » (appareil photo de la tablette) ou choisir un fichier ;
