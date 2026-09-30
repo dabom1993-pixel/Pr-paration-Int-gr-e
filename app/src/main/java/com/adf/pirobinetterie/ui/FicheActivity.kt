@@ -2,12 +2,9 @@ package com.adf.pirobinetterie.ui
 
 import android.app.Activity
 import android.app.AlertDialog
-import android.content.ActivityNotFoundException
-import android.content.ClipData
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
-import android.provider.MediaStore
 import android.view.Gravity
 import android.view.View
 import android.widget.EditText
@@ -19,7 +16,6 @@ import android.widget.ScrollView
 import android.widget.TextView
 import com.adf.pirobinetterie.PiApp
 import com.adf.pirobinetterie.data.Depot
-import com.adf.pirobinetterie.data.FichiersProvider
 import com.adf.pirobinetterie.data.Taches
 import com.adf.pirobinetterie.model.Bride
 import com.adf.pirobinetterie.model.Champ
@@ -88,7 +84,6 @@ class FicheActivity : Activity() {
         statut = badge("", Couleurs.GRIS)
         barre.addView(statut)
         barre.addView(View(this), lp(0, 1, 1f))
-        barre.addView(bouton("PDF", Couleurs.MARINE_CLAIR) { choisirPdf() }, lp(WRAP, WRAP).marges(dp(8), 0, 0, 0))
         barre.addView(bouton("✔  VALIDER", Couleurs.VERT) { valider() }.apply { textSize = 18f }, lp(WRAP, WRAP).marges(dp(10), 0, 0, 0))
         racine.addView(barre, lp(MATCH, WRAP))
 
@@ -160,7 +155,7 @@ class FicheActivity : Activity() {
             c.addView(l)
         }
         if (item.modifieDepuisValidation() || item.revisions.isEmpty()) {
-            c.addView(texte("Rév. ${item.numEnCours} en cours de préparation — « Valider » pour la figer et générer le PDF.", 14f, true, Couleurs.ORANGE)
+            c.addView(texte("Rév. ${item.numEnCours} en cours de préparation — « Valider » pour la figer (avec ou sans PDF).", 14f, true, Couleurs.ORANGE)
                 .apply { setPadding(dp(8), dp(8), 0, 0) })
         }
         return c
@@ -201,11 +196,9 @@ class FicheActivity : Activity() {
         val c = carte("Photo  et  localisation sur plot plan")
         c.addView(cadreImage(item.photo, "Aucune photo", dp(420), diff.photo) { item.photo.takeIf { it.isNotEmpty() }?.let { afficherImage(it, "${item.nom} — photo") } })
         val bPhoto = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        bPhoto.addView(bouton("📷  Prendre la photo", Couleurs.MARINE) { prendrePhoto() }, lp(0, WRAP, 1f).marges(0, dp(8), dp(6), dp(12)))
-        bPhoto.addView(bouton("Choisir un fichier", Couleurs.MARINE_CLAIR) { choisirImage(REQ_FICHIER_PHOTO) }, lp(0, WRAP, 1f).marges(dp(6), dp(8), 0, dp(12)))
+        bPhoto.addView(bouton("📷  Prendre la photo", Couleurs.MARINE) { prendrePhoto() }, lp(0, WRAP, 1f).marges(0, dp(8), 0, dp(12)))
         c.addView(bPhoto)
         c.addView(cadreImage(item.plan, "Aucun plot plan", dp(150), diff.plan) { item.plan.takeIf { it.isNotEmpty() }?.let { afficherImage(it, "${item.nom} — plot plan") } })
-        c.addView(bouton("Remplacer le plot plan", Couleurs.MARINE_CLAIR) { choisirImage(REQ_FICHIER_PLAN) }, lp(MATCH, WRAP).marges(0, dp(8), 0, 0))
         return c
     }
 
@@ -288,7 +281,28 @@ class FicheActivity : Activity() {
     // --- Modifications --------------------------------------------------------------------
 
     private fun editerChamp(cle: String, libelle: String, liste: String?) {
+        if (cle.startsWith("date")) {
+            choisirDate(libelle, item[cle]) { modifierChamp(cle, it) }
+            return
+        }
         saisir(libelle, item[cle], liste?.let { projet.listes[it] }.orEmpty()) { modifierChamp(cle, it) }
+    }
+
+    /** Colonnes de date (ex. "Date Transmission") : saisie uniquement par calendrier, format jj/mm/aaaa. */
+    private fun choisirDate(libelle: String, valeur: String, valider: (String) -> Unit) {
+        val format = java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.FRANCE).apply { isLenient = false }
+        val cal = java.util.Calendar.getInstance()
+        try {
+            format.parse(valeur.take(10))?.let { cal.time = it }
+        } catch (_: Exception) {
+        }
+        val d = android.app.DatePickerDialog(this, { _, annee, mois, jour ->
+            val choisi = java.util.Calendar.getInstance().apply { set(annee, mois, jour) }
+            valider(format.format(choisi.time))
+        }, cal.get(java.util.Calendar.YEAR), cal.get(java.util.Calendar.MONTH), cal.get(java.util.Calendar.DAY_OF_MONTH))
+        d.setTitle(libelle)
+        d.setButton(android.content.DialogInterface.BUTTON_NEUTRAL, "Effacer") { _, _ -> valider("") }
+        d.show()
     }
 
     private fun modifierChamp(cle: String, valeur: String) {
@@ -351,31 +365,8 @@ class FicheActivity : Activity() {
 
     private fun prendrePhoto() {
         val f = depot.nouvellePhoto(item, "photo")
-        val uri = FichiersProvider.uri(this, f)
-        val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
-            putExtra(MediaStore.EXTRA_OUTPUT, uri)
-            clipData = ClipData.newRawUri("", uri)
-            addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-        try {
-            photoEnCours = f.absolutePath
-            startActivityForResult(intent, REQ_PHOTO)
-        } catch (_: ActivityNotFoundException) {
-            photoEnCours = null
-            toast("Aucune application appareil photo disponible")
-        }
-    }
-
-    private fun choisirImage(requete: Int) {
-        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-            addCategory(Intent.CATEGORY_OPENABLE)
-            type = "image/*"
-        }
-        try {
-            startActivityForResult(intent, requete)
-        } catch (_: ActivityNotFoundException) {
-            toast("Aucun sélecteur de fichiers disponible")
-        }
+        photoEnCours = f.absolutePath
+        startActivityForResult(Intent(this, PhotoActivity::class.java).putExtra(PhotoActivity.EXTRA_FICHIER, f.absolutePath), REQ_PHOTO)
     }
 
     @Deprecated("API framework")
@@ -391,27 +382,6 @@ class FicheActivity : Activity() {
                     afficher()
                 } else f?.delete()
             }
-            REQ_FICHIER_PHOTO, REQ_FICHIER_PLAN -> {
-                val uri = data?.data ?: return
-                if (resultCode != RESULT_OK) return
-                val genre = if (requestCode == REQ_FICHIER_PLAN) "plan" else "photo"
-                val ext = when (contentResolver.getType(uri)) {
-                    "image/png" -> "png"
-                    "image/webp" -> "webp"
-                    else -> "jpg"
-                }
-                val dest = File(depot.nouvellePhoto(item, genre).absolutePath.substringBeforeLast('.') + "." + ext)
-                try {
-                    contentResolver.openInputStream(uri)?.use { i -> dest.outputStream().use { o -> i.copyTo(o) } }
-                } catch (e: Exception) {
-                    toast("Image illisible : ${e.message}")
-                    return
-                }
-                if (dest.length() == 0L) return
-                if (genre == "plan") item.plan = dest.absolutePath else item.photo = dest.absolutePath
-                depot.sauver()
-                afficher()
-            }
         }
     }
 
@@ -422,8 +392,9 @@ class FicheActivity : Activity() {
         if (derniere != null && !item.modifieDepuisValidation()) {
             confirmer(
                 "Aucune modification",
-                "Rien n'a changé depuis la Rév. ${derniere.num} du ${derniere.date}.\nRégénérer le PDF de la Rév. ${derniere.num} ?",
-                "Régénérer"
+                "Rien n'a changé depuis la Rév. ${derniere.num} du ${derniere.date}.\n" +
+                    (if (depot.fichierPdf(item, derniere.num).exists()) "Régénérer" else "Générer") + " le PDF de la Rév. ${derniere.num} ?",
+                "Générer le PDF"
             ) { genererPdf(derniere.num) }
             return
         }
@@ -447,20 +418,24 @@ class FicheActivity : Activity() {
             .setTitle("Valider la Rév. $num de ${item.nom}")
             .setView(contenuDialogue)
             .setPositiveButton("Valider et générer le PDF", null)
+            .setNeutralButton("Valider sans PDF", null)
             .setNegativeButton("Annuler", null)
             .create()
-        d.setOnShowListener {
-            d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val texteObjet = objet.text.toString().trim()
-                if (texteObjet.isEmpty()) {
-                    objet.error = "Objet obligatoire"
-                    return@setOnClickListener
-                }
-                d.dismiss()
-                val rev = depot.valider(item, texteObjet)
-                afficher()
-                genererPdf(rev.num)
+        fun validerAvec(pdf: Boolean) {
+            val texteObjet = objet.text.toString().trim()
+            if (texteObjet.isEmpty()) {
+                objet.error = "Objet obligatoire"
+                return
             }
+            d.dismiss()
+            val rev = depot.valider(item, texteObjet)
+            afficher()
+            if (pdf) genererPdf(rev.num)
+            else toast("Rév. ${rev.num} validée et sauvegardée (sans PDF). « VALIDER » permettra de générer son PDF plus tard.")
+        }
+        d.setOnShowListener {
+            d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener { validerAvec(true) }
+            d.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener { validerAvec(false) }
         }
         d.show()
     }
@@ -488,31 +463,8 @@ class FicheActivity : Activity() {
         })
     }
 
-    private fun choisirPdf() {
-        val revs = item.revisions.sortedByDescending { it.num }
-        if (revs.isEmpty()) {
-            message("PDF", "Aucune révision validée pour ${item.nom}. Touchez « VALIDER » pour générer la Rév. 0.")
-            return
-        }
-        val libelles = revs.map { r ->
-            val f = depot.fichierPdf(item, r.num)
-            "Rév. ${r.num} — ${r.date} — ${r.objet}" + if (f.exists()) "" else "  (à régénérer)"
-        }
-        AlertDialog.Builder(this)
-            .setTitle("PDF de ${item.nom}")
-            .setItems(libelles.toTypedArray()) { _, i ->
-                val r = revs[i]
-                val f = depot.fichierPdf(item, r.num)
-                if (f.exists()) afficherPdf(f, "${item.nom} — Rév. ${r.num}") else genererPdf(r.num)
-            }
-            .setNegativeButton("Fermer", null)
-            .show()
-    }
-
     companion object {
         const val EXTRA_ITEM = "item"
         private const val REQ_PHOTO = 10
-        private const val REQ_FICHIER_PHOTO = 11
-        private const val REQ_FICHIER_PLAN = 12
     }
 }

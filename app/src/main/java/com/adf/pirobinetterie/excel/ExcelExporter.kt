@@ -119,7 +119,14 @@ object ExcelExporter {
                 val apres = exporte.v[k].orEmpty().trim()
                 val jaune = diff.champ(k)
                 if (avant != apres) {
-                    feuilleXml.ecrire(ligne, col, apres, jauneSi(styles, feuilleXml.style(ligne, col), jaune))
+                    val serie = if (k.startsWith("date")) serieExcel(apres) else null
+                    if (serie != null) {
+                        // Vraie date Excel (nombre + format de date), pas du texte.
+                        val style = styles?.date(feuilleXml.style(ligne, col) ?: 0) ?: feuilleXml.style(ligne, col)
+                        feuilleXml.ecrire(ligne, col, serie, jauneSi(styles, style, jaune))
+                    } else {
+                        feuilleXml.ecrire(ligne, col, apres, jauneSi(styles, feuilleXml.style(ligne, col), jaune))
+                    }
                 } else if (jaune) {
                     feuilleXml.styler(ligne, col, jauneSi(styles, feuilleXml.style(ligne, col), true))
                 }
@@ -251,6 +258,28 @@ object ExcelExporter {
         return if (n >= 1) item.diffRevision(n) else Diff.VIDE
     }
 
+    /** "jj/mm/aaaa" -> numéro de série de date Excel (système 1900), null si ce n'est pas une date. */
+    internal fun serieExcel(texte: String): String? {
+        val m = Regex("^(\\d{1,2})/(\\d{1,2})/(\\d{4})$").find(texte.trim()) ?: return null
+        val (j, mo, a) = m.destructured
+        val cal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"))
+        cal.clear()
+        cal.isLenient = false
+        return try {
+            cal.set(a.toInt(), mo.toInt() - 1, j.toInt())
+            val jours = (cal.timeInMillis - Date1899) / 86_400_000L
+            jours.toString()
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /** 30/12/1899 à minuit UTC : origine des numéros de série de date Excel. */
+    private val Date1899: Long = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC")).apply {
+        clear()
+        set(1899, java.util.Calendar.DECEMBER, 30)
+    }.timeInMillis
+
     private fun jauneSi(styles: Styles?, style: Int?, jaune: Boolean): Int? =
         if (jaune && styles != null) styles.jaune(style ?: 0) else style
 
@@ -310,7 +339,23 @@ object ExcelExporter {
         var modifie = false
             private set
         private val copies = mutableMapOf<Int, Int>()
+        private val copiesDate = mutableMapOf<Int, Int>()
         private var fillJaune: Int? = null
+
+        /** Copie du style [style] avec le format de date court (jj/mm/aaaa selon Excel). */
+        fun date(style: Int): Int = copiesDate.getOrPut(style) {
+            val cellXfs = doc.getElementsByTagName("cellXfs").item(0) as? Element ?: return style
+            val xfs = enfants(cellXfs, "xf")
+            val modele = xfs.getOrNull(style) ?: xfs.firstOrNull() ?: return style
+            if (modele.getAttribute("numFmtId") == "14") return style
+            val copie = modele.cloneNode(true) as Element
+            copie.setAttribute("numFmtId", "14")
+            copie.setAttribute("applyNumberFormat", "1")
+            cellXfs.appendChild(copie)
+            cellXfs.setAttribute("count", (xfs.size + 1).toString())
+            modifie = true
+            xfs.size
+        }
 
         fun jaune(style: Int): Int = copies.getOrPut(style) {
             val cellXfs = doc.getElementsByTagName("cellXfs").item(0) as? Element ?: return style

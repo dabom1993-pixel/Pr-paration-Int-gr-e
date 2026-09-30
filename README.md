@@ -42,15 +42,20 @@ PI_Robinetterie/
    coché = tout), statut (À valider / En cours / Validés) et recherche. Toucher un **item** pour ouvrir sa fiche récap (même organisation que l'onglet Fiche) :
    - toutes les cases sont modifiables : toucher la case, puis choisir dans la liste de l'onglet
      DATA ou saisir librement ;
-   - **Photo** : « Prendre la photo » (appareil photo de la tablette) ou choisir un fichier ;
-     **Plot plan** : « Remplacer le plot plan » ;
+   - **Photo** : « Prendre la photo » ouvre la prise de vue intégrée (bouton « Retour » pour
+     sortir, puis « Garder » ou « Reprendre »). Le **plot plan** vient de l'import et n'est pas
+     remplaçable sur la tablette ;
+   - **Dates** (ex. Date Transmission) : saisie par calendrier uniquement, écrite dans l'Excel
+     comme une vraie date ;
    - **Brides** : ajout, suppression, modification. Le diamètre et la longueur des tiges sont
      calculés d'après l'**ABBAQUE** de l'onglet DATA dès que DN, PN, Face ou Rondelle change
      (longueur RTJ si Face = RTJ, RF sinon, + la longueur de rondelle réglable si Rondelle = O).
      Toutes les valeurs restent modifiables ;
    - **Commentaire** : texte libre.
-3. **✔ VALIDER** : saisir l'objet de la révision (texte libre, « Initial » pour la Rév. 0).
-   La révision est figée et son **PDF est généré** dans `Export/PDF`.
+3. **✔ VALIDER** : saisir l'objet de la révision (texte libre, « Initial » pour la Rév. 0), puis
+   - « **Valider et générer le PDF** » : la révision est figée et son PDF est créé dans `Export/PDF` ;
+   - « **Valider sans PDF** » : la révision est figée et sauvegardée, sans PDF. Toucher à nouveau
+     « VALIDER » (sans modification) permet de générer son PDF plus tard.
 4. Une modification après validation ouvre la **révision suivante** (Rév. 1, 2…) : elle repart des
    données de la révision précédente. Les **différences avec la révision précédente sont en
    jaune** à l'écran, dans le PDF et dans l'Excel. Le PDF de la révision précédente est conservé.

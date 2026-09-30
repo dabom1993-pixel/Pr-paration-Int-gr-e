@@ -143,7 +143,9 @@ object ExcelImporter {
             if (ligne <= enTetes.ligne) continue
             val valeurs = LinkedHashMap<String, String>()
             for ((col, k) in enTetes.colonnes) {
-                val v = cellules[col]?.trim().orEmpty()
+                var v = cellules[col]?.trim().orEmpty()
+                // Colonne de date sans format date dans l'Excel : numéro de série -> jj/mm/aaaa.
+                if (k.startsWith("date")) v.toDoubleOrNull()?.takeIf { it in 20000.0..80000.0 }?.let { v = Classeur.dateExcel(it) }
                 if (v.isNotEmpty()) valeurs[k] = v
             }
             if (valeurs.isNotEmpty()) result.add(valeurs)
