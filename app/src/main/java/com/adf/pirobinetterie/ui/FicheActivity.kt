@@ -198,7 +198,9 @@ class FicheActivity : Activity() {
         val bPhoto = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         bPhoto.addView(bouton("📷  Prendre la photo", Couleurs.MARINE) { prendrePhoto() }, lp(0, WRAP, 1f).marges(0, dp(8), 0, dp(12)))
         c.addView(bPhoto)
-        c.addView(cadreImage(item.plan, "Aucun plot plan", dp(150), diff.plan) { item.plan.takeIf { it.isNotEmpty() }?.let { afficherImage(it, "${item.nom} — plot plan") } })
+        c.addView(cadreImage(item.plan, "Aucun plot plan — toucher pour le placer", dp(150), diff.plan) {
+            startActivityForResult(Intent(this, PlanActivity::class.java).putExtra(PlanActivity.EXTRA_ITEM, item.nom), REQ_PLAN)
+        })
         return c
     }
 
@@ -373,6 +375,7 @@ class FicheActivity : Activity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         when (requestCode) {
+            REQ_PLAN -> if (resultCode == RESULT_OK) afficher()
             REQ_PHOTO -> {
                 val f = photoEnCours?.let { File(it) }
                 photoEnCours = null
@@ -466,5 +469,6 @@ class FicheActivity : Activity() {
     companion object {
         const val EXTRA_ITEM = "item"
         private const val REQ_PHOTO = 10
+        private const val REQ_PLAN = 11
     }
 }

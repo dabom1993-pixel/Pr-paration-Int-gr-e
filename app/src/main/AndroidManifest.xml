@@ -49,6 +49,12 @@
             android:windowSoftInputMode="adjustResize" />
 
         <activity
+            android:name=".ui.PlanActivity"
+            android:exported="false"
+            android:screenOrientation="sensorLandscape"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden" />
+
+        <activity
             android:name=".ui.PhotoActivity"
             android:exported="false"
             android:screenOrientation="sensorLandscape"

@@ -42,7 +42,14 @@ Pour chaque item dont le nom correspond à la colonne **Équipement / TAG** de l
 Interventions, la tablette affiche le plan de son unité (onglet Plans) avec son **rond ou carré**,
 à la **couleur de sa famille** (onglet Paramètres), sans légende ni trait. Position : colonnes
 « X plan / Y plan », ou à défaut le « Repère » (cellule de l'onglet du plan), comme les macros.
-Cette image remplace alors le fichier `<item>_plan.jpg` du dossier Photos. Le plot plan peut être
+Cette image remplace alors le fichier `<item>_plan.jpg` du dossier Photos.
+
+Toucher le plot plan dans la fiche l'ouvre **en grand** (zoom / déplacement à deux doigts,
+double-tap = vue entière), avec **Fermer** et **Modifier** : choix du plan (s'il y en a plusieurs),
+déplacement du point (le faire glisser ou toucher le plan), forme **rond / ovale** ou
+**carré / rectangle**, **largeur / hauteur**. La localisation modifiée est propre à l'item (elle
+suit ses révisions et n'est pas écrasée par un nouvel import du plot plan) ; « Revenir au point de
+l'Excel » l'annule. Le plot plan peut être
 importé avant ou après le fichier de préparation.
 
 ## 2. Utilisation

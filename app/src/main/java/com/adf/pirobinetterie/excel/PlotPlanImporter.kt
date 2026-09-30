@@ -26,7 +26,9 @@ object PlotPlanImporter {
     class Point(
         val tag: String, val unite: String, val famille: String,
         val fx: Double, val fy: Double, val fw: Double, val fh: Double,
-        val carre: Boolean, val couleur: Int, val etire: Boolean
+        val carre: Boolean, val couleur: Int, val etire: Boolean,
+        /** true si placé / dimensionné à la main sur la tablette (taille dessinée telle quelle). */
+        val manuel: Boolean = false
     )
 
     class Resultat(val plans: List<Plan>, val points: List<Point>, val sansPosition: List<String>)

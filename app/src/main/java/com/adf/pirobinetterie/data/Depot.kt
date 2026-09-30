@@ -226,6 +226,17 @@ class Depot(private val ctx: Context) {
         }
     }
 
+    /**
+     * Image de localisation de [item] d'après son point (modifié à la main via la clé
+     * [PlotPlan.CLE_LOCALISATION], déjà renseignée sur l'écran, sinon celui de l'Excel).
+     * À exécuter en arrière-plan ; retourne le nouveau chemin, ou null si pas de plot plan.
+     */
+    fun rendreLocalisation(item: Item): String? {
+        val plot = plotPlan ?: return null
+        val dest = File(dossierLocalisations(ctx), "${nomFichier(item.nom)}_localisation_${horodatage()}.jpg")
+        return if (PlotPlan.rendreItem(plot, item, dest)) dest.absolutePath else null
+    }
+
     // --- Validation / PDF -----------------------------------------------------------------
 
     /** Fige la révision en cours de [item] (à appeler depuis l'écran), puis sauvegarde. */
