@@ -46,7 +46,7 @@ class Revision(
 class Item(
     val nom: String,
     /** Valeurs lues dans l'Excel à l'import, pour n'écrire à l'export que ce qui a changé. */
-    val initial: Etat,
+    var initial: Etat,
     val v: MutableMap<String, String>,
     val brides: MutableList<Bride>,
     val revisions: MutableList<Revision> = mutableListOf(),

@@ -34,6 +34,17 @@ PI_Robinetterie/
 - Le plot plan peut aussi s'appeler `<item>_plot` ou `<item>_plotplan`.
 - Formats d'image acceptés : jpg, png, webp.
 
+### Plot plan (fichier Excel PlotPlan)
+
+Copier aussi dans `Import/` le fichier **PlotPlan** (ex. `PlotPlan_Projet.xlsm`), puis toucher le
+bouton **Plot plan** de l'écran principal (**rouge** = pas encore importé, **vert** = importé).
+Pour chaque item dont le nom correspond à la colonne **Équipement / TAG** de l'onglet
+Interventions, la tablette affiche le plan de son unité (onglet Plans) avec son **rond ou carré**,
+à la **couleur de sa famille** (onglet Paramètres), sans légende ni trait. Position : colonnes
+« X plan / Y plan », ou à défaut le « Repère » (cellule de l'onglet du plan), comme les macros.
+Cette image remplace alors le fichier `<item>_plan.jpg` du dossier Photos. Le plot plan peut être
+importé avant ou après le fichier de préparation.
+
 ## 2. Utilisation
 
 1. **Importer** : au premier lancement, choisir le dossier `PI_Robinetterie` (une seule fois),

@@ -48,6 +48,7 @@ class MainActivity : Activity() {
     private lateinit var vide: TextView
     private val filtres = mutableMapOf<String, TextView>()
     private var filtre = "Tous"
+    private lateinit var boutonPlotPlan: android.widget.Button
     private lateinit var boutonUnites: TextView
     private lateinit var boutonFamilles: TextView
     private val adaptateur = Adaptateur()
@@ -96,6 +97,8 @@ class MainActivity : Activity() {
             addView(infoProjet)
         }, lp(0, WRAP, 1f))
         barre.addView(bouton("Importer", Couleurs.VERT) { importer() }, lp(WRAP, WRAP).marges(dp(8), 0, 0, 0))
+        boutonPlotPlan = bouton("Plot plan", Couleurs.ROUGE) { importerPlotPlan() }
+        barre.addView(boutonPlotPlan, lp(WRAP, WRAP).marges(dp(8), 0, 0, 0))
         barre.addView(bouton("Exporter Excel", Couleurs.MARINE_CLAIR) { exporterExcel() }, lp(WRAP, WRAP).marges(dp(8), 0, 0, 0))
         barre.addView(bouton("Réglages", Couleurs.MARINE_CLAIR) { reglages() }, lp(WRAP, WRAP).marges(dp(8), 0, 0, 0))
         racine.addView(barre, lp(MATCH, WRAP))
@@ -250,6 +253,13 @@ class MainActivity : Activity() {
     }
 
     private fun rafraichir() {
+        // Plot plan : bouton rouge tant qu'il n'est pas importé, vert ensuite.
+        val plot = depot.plotPlan
+        boutonPlotPlan.text = if (plot == null) "Plot plan : à importer" else "Plot plan ✔"
+        boutonPlotPlan.background = fondCliquable(
+            if (plot == null) Couleurs.ROUGE else Couleurs.VERT,
+            assombrir(if (plot == null) Couleurs.ROUGE else Couleurs.VERT), dp(8).toFloat()
+        )
         val p = depot.projet
         val dossier = depot.arbre?.let { Dossier.libelle(it) } ?: "aucun dossier choisi"
         if (p == null) {
@@ -422,6 +432,46 @@ class MainActivity : Activity() {
                 message("Import impossible", e.message ?: e.toString())
             })
         }
+    }
+
+    // --- Plot plan (fichier Excel PlotPlan) ------------------------------------------------
+
+    private fun importerPlotPlan() {
+        if (depot.racine() == null) {
+            choisirDossier()
+            return
+        }
+        val fichiers = try {
+            depot.fichiersExcel().sortedBy { if ("plot" in it.nom.lowercase()) 0 else 1 }
+        } catch (_: Exception) {
+            choisirDossier()
+            return
+        }
+        if (fichiers.isEmpty()) {
+            message("Plot plan", "Aucun fichier Excel dans ${depot.arbre?.let { Dossier.libelle(it) }}/Import.\n\nCopiez le fichier PlotPlan (.xlsm) par câble USB puis réessayez.")
+            return
+        }
+        val titre = depot.plotPlan?.let { "Réimporter le plot plan (actuel : ${it.fichier}, ${it.date})" } ?: "Fichier PlotPlan à importer"
+        AlertDialog.Builder(this)
+            .setTitle(titre)
+            .setItems(fichiers.map { it.nom }.toTypedArray()) { _, i -> lancerPlotPlan(fichiers[i]) }
+            .setNegativeButton("Annuler", null)
+            .show()
+    }
+
+    private fun lancerPlotPlan(f: Dossier.Fichier) {
+        val attente = attente("Import du plot plan et localisation des items…")
+        Taches.lancer({ depot.importerPlotPlan(f) }, { r ->
+            attente.dismiss()
+            rafraichir()
+            val sans = if (r.sansPoint.isEmpty()) "" else
+                "\n\nItems sans point sur le plot plan (${r.sansPoint.size}) : ${r.sansPoint.take(20).joinToString(", ")}${if (r.sansPoint.size > 20) "…" else ""}"
+            val sansPos = if (r.sansPosition > 0) "\n${r.sansPosition} intervention(s) sans position (ni X/Y, ni repère) ignorée(s)." else ""
+            message("Plot plan importé", "Plan(s) : ${r.plans.joinToString(", ")}\n${r.points} points lus.\n${r.localises} item(s) localisé(s) sur le plan.$sansPos$sans")
+        }, { e ->
+            attente.dismiss()
+            message("Import du plot plan impossible", e.message ?: e.toString())
+        })
     }
 
     // --- Export Excel ---------------------------------------------------------------------

@@ -7,6 +7,7 @@ import android.net.Uri
 import com.adf.pirobinetterie.R
 import com.adf.pirobinetterie.excel.ExcelExporter
 import com.adf.pirobinetterie.excel.ExcelImporter
+import com.adf.pirobinetterie.excel.PlotPlanImporter
 import com.adf.pirobinetterie.model.Item
 import com.adf.pirobinetterie.model.Listes
 import com.adf.pirobinetterie.model.Projet
@@ -35,10 +36,24 @@ class Depot(private val ctx: Context) {
     var projet: Projet? = null
         private set
 
+    private val fichierPlotPlan = File(ctx.filesDir, "plotplan.json")
+
+    /** Plot plan importé (fichier Excel PlotPlan), null tant qu'il n'a pas été importé. */
+    @Volatile
+    var plotPlan: PlotPlan? = null
+        private set
+
     init {
         if (fichierProjet.exists()) {
             projet = try {
                 ProjetJson.lire(fichierProjet.readText())
+            } catch (_: Exception) {
+                null
+            }
+        }
+        if (fichierPlotPlan.exists()) {
+            plotPlan = try {
+                PlotPlan.lire(fichierPlotPlan.readText())
             } catch (_: Exception) {
                 null
             }
@@ -147,6 +162,9 @@ class Depot(private val ctx: Context) {
             dest.delete()
         }
 
+        // Localisation : le plot plan importé remplace l'image "_plan" du dossier Photos.
+        plotPlan?.let { PlotPlan.appliquer(it, nouveau, dossierLocalisations(ctx), h) }
+
         copieDeSecours()
         tmp.copyTo(fichierSource, overwrite = true)
         tmp.delete()
@@ -161,6 +179,51 @@ class Depot(private val ctx: Context) {
             sansPhoto = nouveau.items.filter { it.photo.isEmpty() }.map { it.nom },
             sansPlan = nouveau.items.filter { it.plan.isEmpty() }.map { it.nom }
         )
+    }
+
+    // --- Plot plan -------------------------------------------------------------------------
+
+    class RapportPlotPlan(val plans: List<String>, val points: Int, val localises: Int, val sansPoint: List<String>, val sansPosition: Int)
+
+    /**
+     * Importe le fichier Excel PlotPlan (plans + points des équipements) et génère pour chaque
+     * item du projet son image de localisation. À exécuter en arrière-plan.
+     */
+    fun importerPlotPlan(excel: Dossier.Fichier): RapportPlotPlan {
+        val imp = dossierImport() ?: throw IllegalStateException("Dossier de travail inaccessible : choisissez-le à nouveau.")
+        val tmp = File(ctx.cacheDir, "plotplan.xlsm")
+        imp.copierVers(excel, tmp)
+        try {
+            val lu = PlotPlanImporter.lire(tmp)
+            if (lu.plans.isEmpty()) throw PlotPlanImporter.PlotPlanException("Aucune image de plan trouvée dans ${excel.nom}.")
+            val h = horodatage()
+            val dir = File(ctx.filesDir, "plotplan").apply { mkdirs() }
+            val plans = linkedMapOf<String, String>()
+            for (pl in lu.plans) {
+                val dest = File(dir, "plan_${nomFichier(pl.unite)}_$h.${pl.image.substringAfterLast('.', "jpg")}")
+                PlotPlanImporter.extraireImage(tmp, pl.image, dest)
+                plans[pl.unite] = dest.absolutePath
+            }
+            val plot = PlotPlan(excel.nom, java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.FRANCE).format(Date()), plans, lu.points)
+            fichierPlotPlan.writeText(plot.json())
+            plotPlan = plot
+
+            val p = projet
+            var localises = 0
+            if (p != null) {
+                localises = PlotPlan.appliquer(plot, p, dossierLocalisations(ctx), h)
+                fichierProjet.writeText(ProjetJson.ecrire(p))
+            }
+            return RapportPlotPlan(
+                plans = plans.keys.toList(),
+                points = lu.points.size,
+                localises = localises,
+                sansPoint = p?.items?.filter { plot.pointsDe(it.nom).isEmpty() }?.map { it.nom }.orEmpty(),
+                sansPosition = lu.sansPosition.size
+            )
+        } finally {
+            tmp.delete()
+        }
     }
 
     // --- Validation / PDF -----------------------------------------------------------------
@@ -239,6 +302,7 @@ class Depot(private val ctx: Context) {
 
         fun dossierPhotos(ctx: Context): File = File(ctx.getExternalFilesDir(null) ?: ctx.filesDir, "photos")
         fun dossierPdf(ctx: Context): File = File(ctx.getExternalFilesDir(null) ?: ctx.filesDir, "pdf")
+        fun dossierLocalisations(ctx: Context): File = File(ctx.getExternalFilesDir(null) ?: ctx.filesDir, "localisations")
 
         fun horodatage(): String = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.FRANCE).format(Date())
 
