@@ -87,7 +87,11 @@ jobs:
 
       # Nom de fichier fixe pour que l'URL de téléchargement ne change jamais.
       - name: Préparer l'APK sous un nom stable
-        run: cp ${{ env.DOSSIER }}/*.apk ${{ env.DOSSIER }}/${{ env.APK }}
+        run: |
+          cp ${{ env.DOSSIER }}/*.apk ${{ env.DOSSIER }}/${{ env.APK }}
+          # Numéro de version de l'APK (= numéro du run, voir app/build.gradle.kts) : lu par
+          # l'app et par ADF TAR pour savoir si une mise à jour est nécessaire.
+          echo "${{ github.run_number }}" > ${{ env.DOSSIER }}/version.txt
 
       - name: Publier l'APK généré (artifact du run)
         uses: actions/upload-artifact@v4
@@ -109,4 +113,6 @@ jobs:
           body: >
             APK reconstruit à chaque lancement manuel du workflow "Build APK"
             (version ${{ inputs.version }}). Toujours disponible à la même URL.
-          files: ${{ env.DOSSIER }}/${{ env.APK }}
+          files: |
+            ${{ env.DOSSIER }}/${{ env.APK }}
+            ${{ env.DOSSIER }}/version.txt

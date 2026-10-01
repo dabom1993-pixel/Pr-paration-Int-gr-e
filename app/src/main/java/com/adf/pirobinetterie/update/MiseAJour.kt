@@ -29,7 +29,8 @@ object MiseAJour {
     private const val DERNIERE = "dernier_asset"
     private const val EN_ATTENTE = "asset_en_attente"
 
-    class Info(val id: Long, val url: String, val taille: Long)
+    /** [version] : numéro publié dans version.txt (null pour une release plus ancienne). */
+    class Info(val id: Long, val url: String, val taille: Long, val version: Int? = null)
 
     fun reseauDisponible(ctx: Context): Boolean {
         val cm = ctx.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false
@@ -50,16 +51,41 @@ object MiseAJour {
             if (conn.responseCode != HttpURLConnection.HTTP_OK) return null
             val json = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
             val assets = json.getJSONArray("assets")
+            var apk: JSONObject? = null
+            var urlVersion: String? = null
             for (i in 0 until assets.length()) {
                 val a = assets.getJSONObject(i)
-                if (a.optString("name") == NOM_APK) {
-                    return Info(a.getLong("id"), a.getString("browser_download_url"), a.optLong("size", -1L))
+                when (a.optString("name")) {
+                    NOM_APK -> apk = a
+                    "version.txt" -> urlVersion = a.getString("browser_download_url")
                 }
             }
-            return null
+            val a = apk ?: return null
+            return Info(
+                a.getLong("id"), a.getString("browser_download_url"), a.optLong("size", -1L),
+                urlVersion?.let { lireVersion(it) }
+            )
         } finally {
             conn.disconnect()
         }
+    }
+
+    private fun lireVersion(url: String): Int? = try {
+        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
+            instanceFollowRedirects = true
+            connectTimeout = 15_000
+            readTimeout = 15_000
+            useCaches = false
+        }
+        try {
+            if (conn.responseCode == HttpURLConnection.HTTP_OK) {
+                conn.inputStream.bufferedReader().use { it.readText() }.trim().toIntOrNull()
+            } else null
+        } finally {
+            conn.disconnect()
+        }
+    } catch (_: Exception) {
+        null
     }
 
     /**
@@ -67,6 +93,10 @@ object MiseAJour {
      * contrôle, la version publiée est considérée comme celle en cours d'utilisation.
      */
     fun estNouvelle(ctx: Context, info: Info): Boolean {
+        // Référence commune avec ADF TAR : le numéro de version de l'APK installé. Une mise à
+        // jour faite depuis ADF TAR est ainsi reconnue ici, et inversement.
+        info.version?.let { return it > BuildConfig.VERSION_CODE }
+        // Ancienne release sans version.txt : suivi par identifiant de fichier.
         val p = prefs(ctx)
         val derniere = p.getLong(DERNIERE, -1L)
         if (derniere == -1L) {

@@ -3,6 +3,11 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+// Numéro de version = numéro du run GitHub Actions : il augmente à chaque compilation. Il est
+// aussi publié dans version.txt à côté de l'APK, ce qui permet à l'app et à ADF TAR de savoir
+// si la version installée est la dernière (même référence pour les deux).
+val numeroVersion = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
+
 android {
     namespace = "com.adf.pirobinetterie"
     compileSdk = 34
@@ -11,8 +16,8 @@ android {
         applicationId = "com.adf.pirobinetterie"
         minSdk = 24
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = numeroVersion
+        versionName = "1.$numeroVersion"
     }
 
     signingConfigs {
