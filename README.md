@@ -115,7 +115,7 @@ Deux applications sont construites à partir du même code :
 
 | | **BETA** (test) | **Finale** (accessible à tous) |
 |---|---|---|
-| Nom sur la tablette | PI Robinetterie **BETA** (badge orange) | PI Robinetterie |
+| Nom sur la tablette | PI Robinetterie (icône orange, badge BETA dans l'app) | PI Robinetterie |
 | Icône | carré **orange** | carré vert |
 | Identifiant Android | `com.adf.pirobinetterie.beta` | `com.adf.pirobinetterie` |
 | Lien de téléchargement | `…/releases/download/tablette-beta/PIRobinetterie-BETA.apk` | `…/releases/download/tablette-latest/PIRobinetterie.apk` |

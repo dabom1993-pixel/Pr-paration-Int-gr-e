@@ -32,7 +32,7 @@ android {
 
     // Deux versions de l'application, construites depuis le même code :
     // - "beta"   : version de test (installée à côté de la finale, données séparées,
-    //              nom "PI Robinetterie BETA", release GitHub "tablette-beta") ;
+    //              icône orange, release GitHub "tablette-beta") ;
     // - "finale" : version accessible à tous (release GitHub "tablette-latest").
     flavorDimensions += "canal"
     productFlavors {
