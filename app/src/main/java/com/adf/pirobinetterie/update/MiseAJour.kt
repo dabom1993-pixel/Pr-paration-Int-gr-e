@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import com.adf.pirobinetterie.BuildConfig
 import com.adf.pirobinetterie.data.FichiersProvider
 import org.json.JSONObject
 import java.io.File
@@ -19,9 +20,10 @@ import java.net.URL
  */
 object MiseAJour {
 
+    /** Release GitHub suivie : "tablette-beta" pour la version BETA, "tablette-latest" pour la finale. */
     private const val API_URL =
-        "https://api.github.com/repos/dabom1993-pixel/Pr-paration-Int-gr-e/releases/tags/tablette-latest"
-    private const val NOM_APK = "PIRobinetterie.apk"
+        "https://api.github.com/repos/dabom1993-pixel/Pr-paration-Int-gr-e/releases/tags/" + BuildConfig.CANAL_MAJ
+    private const val NOM_APK = BuildConfig.NOM_APK
 
     private const val PREFS = "maj_prefs"
     private const val DERNIERE = "dernier_asset"

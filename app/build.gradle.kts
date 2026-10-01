@@ -30,6 +30,32 @@ android {
         }
     }
 
+    // Deux versions de l'application, construites depuis le même code :
+    // - "beta"   : version de test (installée à côté de la finale, données séparées,
+    //              nom "PI Robinetterie BETA", release GitHub "tablette-beta") ;
+    // - "finale" : version accessible à tous (release GitHub "tablette-latest").
+    flavorDimensions += "canal"
+    productFlavors {
+        create("finale") {
+            dimension = "canal"
+            buildConfigField("String", "CANAL_MAJ", "\"tablette-latest\"")
+            buildConfigField("String", "NOM_APK", "\"PIRobinetterie.apk\"")
+            buildConfigField("boolean", "BETA", "false")
+        }
+        create("beta") {
+            dimension = "canal"
+            applicationIdSuffix = ".beta"
+            versionNameSuffix = "-beta"
+            buildConfigField("String", "CANAL_MAJ", "\"tablette-beta\"")
+            buildConfigField("String", "NOM_APK", "\"PIRobinetterie-BETA.apk\"")
+            buildConfigField("boolean", "BETA", "true")
+        }
+    }
+
+    buildFeatures {
+        buildConfig = true
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false

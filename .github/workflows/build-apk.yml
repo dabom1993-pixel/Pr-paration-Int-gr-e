@@ -2,6 +2,14 @@ name: Build APK
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Version à construire : beta (test, votre tablette) ou finale (accessible à tous)"
+        type: choice
+        options:
+          - beta
+          - finale
+        default: beta
 
 permissions:
   contents: write
@@ -54,30 +62,51 @@ jobs:
             git push
           fi
 
-      - name: Compiler l'APK (debug)
-        run: ./gradlew assembleDebug --no-daemon --stacktrace
+      # beta   -> application "PI Robinetterie BETA" (com.adf.pirobinetterie.beta), release "tablette-beta"
+      # finale -> application "PI Robinetterie" (com.adf.pirobinetterie), release "tablette-latest"
+      - name: Choisir la version
+        run: |
+          if [ "${{ inputs.version }}" = "finale" ]; then
+            echo "TACHE=assembleFinaleDebug" >> $GITHUB_ENV
+            echo "DOSSIER=app/build/outputs/apk/finale/debug" >> $GITHUB_ENV
+            echo "APK=PIRobinetterie.apk" >> $GITHUB_ENV
+            echo "TAG=tablette-latest" >> $GITHUB_ENV
+            echo "TITRE=Version finale (tablette)" >> $GITHUB_ENV
+            echo "PRERELEASE=false" >> $GITHUB_ENV
+          else
+            echo "TACHE=assembleBetaDebug" >> $GITHUB_ENV
+            echo "DOSSIER=app/build/outputs/apk/beta/debug" >> $GITHUB_ENV
+            echo "APK=PIRobinetterie-BETA.apk" >> $GITHUB_ENV
+            echo "TAG=tablette-beta" >> $GITHUB_ENV
+            echo "TITRE=Version BETA (test)" >> $GITHUB_ENV
+            echo "PRERELEASE=true" >> $GITHUB_ENV
+          fi
+
+      - name: Compiler l'APK
+        run: ./gradlew ${{ env.TACHE }} --no-daemon --stacktrace
+
+      # Nom de fichier fixe pour que l'URL de téléchargement ne change jamais.
+      - name: Préparer l'APK sous un nom stable
+        run: cp ${{ env.DOSSIER }}/*.apk ${{ env.DOSSIER }}/${{ env.APK }}
 
       - name: Publier l'APK généré (artifact du run)
         uses: actions/upload-artifact@v4
         with:
-          name: PIRobinetterie-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: ${{ env.APK }}
+          path: ${{ env.DOSSIER }}/${{ env.APK }}
 
-      # Nom de fichier fixe pour que l'URL de téléchargement ne change jamais.
-      - name: Préparer l'APK sous un nom stable
-        run: cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/PIRobinetterie.apk
-
-      # Republie (crée ou remplace) une release GitHub à tag fixe "tablette-latest" :
-      # https://github.com/<owner>/<repo>/releases/download/tablette-latest/PIRobinetterie.apk
+      # Republie (crée ou remplace) la release à tag fixe de la version choisie :
+      # https://github.com/<owner>/<repo>/releases/download/<tag>/<apk>
       # (URL utilisée par le bouton logo de l'application pour la mise à jour).
-      - name: Publier/mettre à jour la release "tablette-latest"
+      - name: Publier/mettre à jour la release de la version
         uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: tablette-latest
-          name: "Dernière version (tablette)"
+          tag_name: ${{ env.TAG }}
+          name: ${{ env.TITRE }}
+          prerelease: ${{ env.PRERELEASE }}
           body: >
-            APK reconstruit à chaque lancement manuel du workflow "Build APK".
-            Toujours disponible à la même URL.
-          files: app/build/outputs/apk/debug/PIRobinetterie.apk
+            APK reconstruit à chaque lancement manuel du workflow "Build APK"
+            (version ${{ inputs.version }}). Toujours disponible à la même URL.
+          files: ${{ env.DOSSIER }}/${{ env.APK }}

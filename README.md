@@ -109,19 +109,34 @@ Les deux versions du fichier Excel sont acceptées : Suivi avec une colonne « I
 Matos avec « Unité / Zone, Type, Matière, Face, Obtur, Lg, Diam, Matière2, Rondelle, RAAT » ou
 les anciens libellés (« Famille, MatièreJ, LgB, DiamB… »).
 
-## 3. Compiler l'APK (depuis GitHub, lancement manuel)
+## 3. Compiler l'APK : version BETA (test) et version finale
 
-1. Onglet **Actions** du dépôt → workflow **Build APK** → **Run workflow**.
-2. Attendre la fin (~5-10 min), puis télécharger l'APK :
-   - soit dans les **Artifacts** du run ;
-   - soit à l'adresse fixe
-     `https://github.com/dabom1993-pixel/Pr-paration-Int-gr-e/releases/download/tablette-latest/PIRobinetterie.apk`.
+Deux applications sont construites à partir du même code :
+
+| | **BETA** (test) | **Finale** (accessible à tous) |
+|---|---|---|
+| Nom sur la tablette | PI Robinetterie **BETA** (badge orange) | PI Robinetterie |
+| Icône | carré **orange** | carré vert |
+| Identifiant Android | `com.adf.pirobinetterie.beta` | `com.adf.pirobinetterie` |
+| Lien de téléchargement | `…/releases/download/tablette-beta/PIRobinetterie-BETA.apk` | `…/releases/download/tablette-latest/PIRobinetterie.apk` |
+
+Les deux s'installent **côte à côte** sur la même tablette, avec des **données séparées** : tester
+la BETA ne touche jamais aux projets de la version finale. Chacune se met à jour par son logo ADF
+depuis sa propre release.
+
+Fonctionnement : chaque modification est d'abord publiée en **BETA** ; quand elle est validée sur
+la tablette de test, la **finale** est reconstruite depuis le même code.
+
+1. Onglet **Actions** du dépôt → workflow **Build APK** → **Run workflow** → choisir
+   **beta** ou **finale**.
+2. Attendre la fin (~5-10 min), puis télécharger l'APK (lien ci-dessus, ou **Artifacts** du run).
 3. Copier l'APK sur la tablette et l'installer (autoriser les « sources inconnues »).
 
+Le lien BETA n'est pas affiché comme « dernière version » sur GitHub (pré-version), mais le dépôt
+étant public, toute personne qui connaît le lien peut la télécharger.
+
 La clé de signature est générée une seule fois puis réutilisée : chaque nouvelle version
-s'installe par-dessus la précédente **sans perte de données**. Une fois l'application installée,
-toucher le **logo ADF** (connexion internet nécessaire) recherche et installe la dernière
-version compilée.
+s'installe par-dessus la précédente **sans perte de données**.
 
 ## 4. Structure du code
 

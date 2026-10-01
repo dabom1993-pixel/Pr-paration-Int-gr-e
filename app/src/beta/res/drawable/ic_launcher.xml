@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Icône de la version BETA (test) : carré ORANGE au lieu du vert, bandeau orange en bas.
+     robinet (volant, tige, corps, brides) en bleu marine. Vectoriel : net à toutes les tailles. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Fond -->
+    <path android:fillColor="#FFFFFF" android:pathData="M0,0h108v108h-108z" />
+    <!-- Carre orange (version BETA), ouvert au milieu du cote droit -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#E08A00"
+        android:strokeWidth="4.64"
+        android:pathData="M104.62,18.98 L104.62,3.38 L3.38,3.38 L3.38,104.62 L104.62,104.62 L104.62,89.02" />
+    <!-- Bandeau "beta" : coin orange en bas a droite -->
+    <path android:fillColor="#E08A00" android:pathData="M108,70 L108,108 L70,108 Z" />
+    <!-- Robinet -->
+    <path
+        android:fillColor="#22385F"
+        android:pathData="M32.77,16.84 H85.85 V27.46 H32.77 Z
+                            M55.4,26.9 H63.22 V46.6 H55.4 Z
+                            M40.59,46.04 H78.03 A7.82,7.82 0 0 1 85.85,53.86 V75.23 A7.82,7.82 0 0 1 78.03,83.05 H40.59 A7.82,7.82 0 0 1 32.77,75.23 V53.86 A7.82,7.82 0 0 1 40.59,46.04 Z
+                            M16.84,51.35 H27.46 V77.89 H16.84 Z
+                            M26.9,59.31 H33.33 V69.92 H26.9 Z
+                            M85.29,59.31 H94.37 V69.92 H85.29 Z
+                            M93.81,51.35 H106.94 V77.89 H93.81 Z" />
+</vector>

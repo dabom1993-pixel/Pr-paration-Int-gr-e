@@ -92,7 +92,12 @@ class MainActivity : Activity() {
         barre.addView(LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(16), 0, 0, 0)
-            addView(texte("Préparation intégrée — Robinetterie", 22f, true, Color.WHITE))
+            addView(LinearLayout(this@MainActivity).apply {
+                gravity = Gravity.CENTER_VERTICAL
+                addView(texte("Préparation intégrée — Robinetterie", 22f, true, Color.WHITE))
+                // Version de test : badge bien visible pour ne pas la confondre avec la finale.
+                if (com.adf.pirobinetterie.BuildConfig.BETA) addView(badge("BETA", Couleurs.ORANGE), lp(WRAP, WRAP).marges(dp(12), 0, 0, 0))
+            })
             infoProjet = texte("", 15f, false, 0xFFCFD8E6.toInt())
             addView(infoProjet)
         }, lp(0, WRAP, 1f))
